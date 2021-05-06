@@ -1,0 +1,54 @@
+################ Input Address Matching ################
+
+#### Concept Trying of Finding Inputs from TXID and Vout
+
+#*******************************************************
+# Hyptothetical Idea
+#*******************************************************
+# Try to add the tx with txid 8b58fa31c458543bd04bcdbcd7c168435c22004ba8cb92a8397d470474687fa3
+# See follwing query
+MATCH (n:Transaction) WHERE id(n)=325797943 RETURN n.txid
+
+
+#*******************************************************
+# Information 
+#*******************************************************
+# We would have the following information
+# - input txid: ccba4d6a4745d99f0a4946610387f86046a17852fc073fb65d837407a25cfd5c
+# - Input vout / output_nr : 0
+
+# Disclaimer: execution time ~15min
+MATCH
+	(n:Transaction {txid: "ccba4d6a4745d99f0a4946610387f86046a17852fc073fb65d837407a25cfd5c"})
+RETURN n
+
+#fast equivalent query using neo4j's internal id
+MATCH (n:Transaction) WHERE id(n)=325797943 RETURN n
+
+
+#*******************************************************
+# Matching Strategy
+#*******************************************************
+# query
+MATCH 
+	(n:Transaction)-[r:RECEIVES]->(m:Address)
+WHERE 
+	n.txid ="ccba4d6a4745d99f0a4946610387f86046a17852fc073fb65d837407a25cfd5c" AND
+	r.output_nr = 0
+RETURN m
+
+#fast alternative for proof of concept
+MATCH 
+	(n:Transaction)-[r:RECEIVES]->(m:Address)
+WHERE 
+	id(n)=478676980 AND
+	r.output_nr = 0
+RETURN m
+
+
+
+
+
+
+
+
