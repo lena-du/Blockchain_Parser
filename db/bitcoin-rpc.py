@@ -17,8 +17,8 @@ def getblock(blockhash):
 
     # filter relevant blockinfo
     from datetime import datetime, timezone
-    ts_epoch = block['time']
-    block_timestamp = datetime.fromtimestamp(ts_epoch)
+    ts_median = block['mediantime']
+    block_timestamp = datetime.fromtimestamp(ts_median)
     block_median_time = block_timestamp.strftime('%Y-%m-%dT%H:%M')
     block_date = block_timestamp.strftime('%Y-%m-%d')
     block_hash = block['hash']
@@ -31,7 +31,7 @@ def getblock(blockhash):
     data = {}
     data['block_hash'] = block_hash
     data['block_height'] = block_height
-    data['block_median_time'] = str(block_median_time) # tbd: change timestamp to median_time
+    data['block_median_time'] = str(block_median_time)
     data['block_date'] = str(block_date)
     if block_height != 0:
         data['previousblockhash'] = previousblockhash
