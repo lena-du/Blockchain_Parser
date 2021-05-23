@@ -102,6 +102,7 @@ def gettx(tx):
                 outSum += o['value']
                 for a in o['scriptPubKey']['addresses']:
                     outputAddrObject['addr'] = a
+                    outputAddrObject['val'] =int (o['value']*100000000)
                     outputAddrObject['outNr'] = o['n']
 
         jOutAddr = json.dumps(outputAddrObject)
