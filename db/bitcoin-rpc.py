@@ -1,6 +1,9 @@
 import os 
 import time
 import json
+import hashlib
+from base58 import b58encode
+from binascii import unhexlify
 from kafka import KafkaProducer
 from datetime import datetime, timezone
 
@@ -78,19 +81,38 @@ def gettx(tx):
             inSum += val
 
             # input addresses
-            for ia in inputtx['vout'][i['vout']]['scriptPubKey']['addresses']:
-                inputAddrObject['addr'] = ia
-                inputAddrObject['val'] = val
+            if inputtx['vout'][i['vout']]['scriptPubKey']['type'] == "pubkey":
+                ia = getAddress(inputtx['vout'][i['vout']]['scriptPubKey']['asm'].split()[0])
+                inputAddrObject['addr'] = ia.decode("utf-8")
+                inputAddrObject['val'] = val  ## crash
 
                 jInAddr = json.dumps(inputAddrObject)
                 jsonInDict = json.loads(jInAddr)
                 input_address_list.append(jsonInDict)
 
+            if 'addresses' in inputtx['vout'][i['vout']]['scriptPubKey']:
+                for ia in inputtx['vout'][i['vout']]['scriptPubKey']['addresses']:
+                    inputAddrObject['addr'] = ia
+                    inputAddrObject['val'] = val
+
+                    jInAddr = json.dumps(inputAddrObject)
+                    jsonInDict = json.loads(jInAddr)
+                    input_address_list.append(jsonInDict)
+
         # output addresses
         for o in rawtx['vout']:
             if o['scriptPubKey']['type'] != "nulldata": # handling OP_RETURN data - can be skipped
                 outSum += o['value']
-                if o['scriptPubKey']['addresses'] in a:
+                if o['scriptPubKey']['type'] == "pubkey":
+                    a = getAddress(o['scriptPubKey']['asm'].split()[0] )
+                    outputAddrObject['addr'] = a.decode("utf-8")
+                    outputAddrObject['val'] =int (o['value']*100000000)
+                    outputAddrObject['outNr'] = o['n']
+                    
+                    jOutAddr = json.dumps(outputAddrObject)
+                    jsonOutDict = json.loads(jOutAddr)
+                    output_address_list.append(jsonOutDict)
+                if 'addresses' in o['scriptPubKey']:
                     for a in o['scriptPubKey']['addresses']:
                         outputAddrObject['addr'] = a
                         outputAddrObject['val'] =int (o['value']*100000000)
@@ -103,7 +125,12 @@ def gettx(tx):
         for o in rawtx['vout']:
             if o['scriptPubKey']['type'] != "nulldata": # handling OP_RETURN data - can be skipped
                 outSum += o['value']
-                if o['scriptPubKey']['addresses'] in a:
+                if o['scriptPubKey']['type'] == "pubkey":
+                    a = getAddress(o['scriptPubKey']['asm'].split()[0] )
+                    outputAddrObject['addr'] = a.decode("utf-8")
+                    outputAddrObject['val'] =int (o['value']*100000000)
+                    outputAddrObject['outNr'] = o['n']
+                if 'addresses' in o['scriptPubKey']:
                     for a in o['scriptPubKey']['addresses']:
                         outputAddrObject['addr'] = a
                         outputAddrObject['val'] =int (o['value']*100000000)
@@ -120,21 +147,29 @@ def gettx(tx):
         jsonInDict = json.loads(jInAddr)
         input_address_list.append(jsonInDict)
 
-
     # get degrees
     txdata['outDegree'] = len(rawtx['vout'])
     txdata['inDegree'] = len(rawtx['vin'])
-
-
-
-    x = round(outSum*100000000, 0)
-    txdata['outSum'] = int( x)
+    txdata['outSum'] = int(outSum*100000000)
     txdata['inSum'] = inSum
     txdata['input_list'] = input_address_list
     txdata['output_list'] = output_address_list
 
-
     return txdata
+
+def getAddress(pubKey):
+    h3 = hashlib.sha256(unhexlify(pubKey))
+    h4 = hashlib.new('ripemd160', h3.digest())
+
+    result = b'\x00' + h4.digest()
+
+    h5 = hashlib.sha256(result)
+    h6 = hashlib.sha256(h5.digest())
+
+    result += h6.digest()[:4]
+
+    return b58encode(result)
+
 
 startTime = time.time() # measure execution time
 
@@ -143,7 +178,8 @@ producer = KafkaProducer(bootstrap_servers='localhost:9092')
 producer = KafkaProducer(value_serializer=lambda v: json.dumps(v).encode('utf-8'))
 
 #block information retrieval
-blockhash =   getBestBlockHash()
+#blockhash =   getBestBlockHash()
+blockhash = "00000000000000000001b7f8c3fded86f198c356f6bdcc847edf93d4633aa755"
 data, block = getblock(blockhash)
 # send jsonBlockData to Kafka Blocks Topic
 producer.send('blocks', data)
