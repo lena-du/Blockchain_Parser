@@ -1,5 +1,7 @@
 import os 
+import time
 import json
+from kafka import KafkaProducer
 from datetime import datetime, timezone
 
 def getBestBlockHash():
@@ -88,22 +90,24 @@ def gettx(tx):
         for o in rawtx['vout']:
             if o['scriptPubKey']['type'] != "nulldata": # handling OP_RETURN data - can be skipped
                 outSum += o['value']
-                for a in o['scriptPubKey']['addresses']:
-                    outputAddrObject['addr'] = a
-                    outputAddrObject['val'] =int (o['value']*100000000)
-                    outputAddrObject['outNr'] = o['n']
+                if o['scriptPubKey']['addresses'] in a:
+                    for a in o['scriptPubKey']['addresses']:
+                        outputAddrObject['addr'] = a
+                        outputAddrObject['val'] =int (o['value']*100000000)
+                        outputAddrObject['outNr'] = o['n']
 
-                    jOutAddr = json.dumps(outputAddrObject)
-                    jsonOutDict = json.loads(jOutAddr)
-                    output_address_list.append(jsonOutDict)
+                        jOutAddr = json.dumps(outputAddrObject)
+                        jsonOutDict = json.loads(jOutAddr)
+                        output_address_list.append(jsonOutDict)
     else:
         for o in rawtx['vout']:
             if o['scriptPubKey']['type'] != "nulldata": # handling OP_RETURN data - can be skipped
                 outSum += o['value']
-                for a in o['scriptPubKey']['addresses']:
-                    outputAddrObject['addr'] = a
-                    outputAddrObject['val'] =int (o['value']*100000000)
-                    outputAddrObject['outNr'] = o['n']
+                if o['scriptPubKey']['addresses'] in a:
+                    for a in o['scriptPubKey']['addresses']:
+                        outputAddrObject['addr'] = a
+                        outputAddrObject['val'] =int (o['value']*100000000)
+                        outputAddrObject['outNr'] = o['n']
 
         jOutAddr = json.dumps(outputAddrObject)
         jsonOutDict = json.loads(jOutAddr)
@@ -132,16 +136,24 @@ def gettx(tx):
 
     return txdata
 
-#example block information retrieval
+startTime = time.time() # measure execution time
+
+# connect to Kafka Server
+producer = KafkaProducer(bootstrap_servers='localhost:9092')
+producer = KafkaProducer(value_serializer=lambda v: json.dumps(v).encode('utf-8'))
+
+#block information retrieval
 blockhash =   getBestBlockHash()
 data, block = getblock(blockhash)
-jsonBlockData = json.dumps(data, indent=4, sort_keys=False)
-# tbd: send jsonBlockData to Kafka Blocks Topic
-print(jsonBlockData)
+# send jsonBlockData to Kafka Blocks Topic
+producer.send('blocks', data)
 
-# example transaction information retrieval
-for id in block['tx'][:3]:
+# transaction information retrieval
+for id in block['tx'][:]:
+        print(id['txid'])
         tx = gettx(id)
-        jsonTxData =  json.dumps(tx, indent=4, sort_keys=False)
-        # tbd: send jsonTxData to Kafka Transactions Topic
-        print(jsonTxData)
+        # send jsonTxData to Kafka Transactions Topic
+        producer.send('transactions', tx)
+
+executionTime = (time.time() - startTime)
+print('Execution time in seconds: ' + str(executionTime))
