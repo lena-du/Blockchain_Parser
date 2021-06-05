@@ -30,8 +30,8 @@ def getblock(blockhash):
 
     # filter relevant blockinfo
     from datetime import datetime, timezone
-    ts_median = block['mediantime']
-    block_timestamp = datetime.fromtimestamp(ts_median)
+    ts_median = block['time']
+    block_timestamp = datetime.fromtimestamp(ts_median, tz=timezone.utc)
     block_median_time = block_timestamp.strftime('%Y-%m-%dT%H:%M')
     block_date = block_timestamp.strftime('%Y-%m-%d')
     block_hash = block['hash']
@@ -54,14 +54,14 @@ def getblock(blockhash):
 
 def gettx(tx, block):
 
-    command = "bitcoin-cli getrawtransaction " + tx + " true"
+    command = "bitcoin-cli getrawtransaction " + tx['txid'] + " true"
     stream = os.popen(command)
 
     # load data into json object rawtx
     rawtx = json.loads(stream.read())
 
     txdata = {}
-    txdata['txid'] = tx
+    txdata['txid'] = tx['txid']
     txdata['block_hash'] = block['hash']
     ts_epoch = block['time']
     block_timestamp = datetime.fromtimestamp(ts_epoch)
@@ -87,16 +87,17 @@ def gettx(tx, block):
             val = int (inputtx['vout'][i['vout']]['value']*100000000)
             inSum += val
 
-            # input addresses
+            # input addresses - P2PK
             if inputtx['vout'][i['vout']]['scriptPubKey']['type'] == "pubkey":
                 ia = getAddress(inputtx['vout'][i['vout']]['scriptPubKey']['asm'].split()[0])
                 inputAddrObject['addr'] = ia.decode("utf-8")
-                inputAddrObject['val'] = val  ## crash
+                inputAddrObject['val'] = val  
 
                 jInAddr = json.dumps(inputAddrObject)
                 jsonInDict = json.loads(jInAddr)
                 input_address_list.append(jsonInDict)
 
+            # P2PKH
             if 'addresses' in inputtx['vout'][i['vout']]['scriptPubKey']:
                 for ia in inputtx['vout'][i['vout']]['scriptPubKey']['addresses']:
                     inputAddrObject['addr'] = ia
