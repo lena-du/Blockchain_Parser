@@ -7,15 +7,18 @@ from kafka import KafkaProducer
 producer = KafkaProducer(bootstrap_servers='localhost:9092')
 producer = KafkaProducer(value_serializer=lambda v: json.dumps(v).encode('utf-8'))
 
+
 startTime = time.time()
 
 for blockheight in range(1,11):
-    # retrival of block + transfer to respective topic 
-    blockhash = getBlockHash(blockheight)
-    data, block = getblock(blockhash)
-    producer.send('blocks', data)
-    #print("Error handling block at length" + blockheight)
-
+    try:
+        # retrival of block + transfer to respective topic 
+        blockhash = getBlockHash(blockheight)
+        data, block = getblock(blockhash)
+        producer.send('blocks', data)
+    except:
+        print("Error handling block at length" + str(blockheight)
+    
     try:
         # retrival of transactions + transfer to respective topic
         for txid in block['tx'][:]:
