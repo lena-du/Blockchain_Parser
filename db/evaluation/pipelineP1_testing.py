@@ -21,10 +21,11 @@ for blockheight in range(1,11):
     # retrival of transactions + transfer to respective topic
     for txid in block['tx'][:]:
         try:
+            #print(txid)
             tx = gettx(txid,block)
             producer.send('transactions', tx)
         except:
-            print("Error handling transactions at block" + str(blockheight) + ' with transaction id' + str(txid))
+            print("Error handling transactions at block" + str(blockheight) + ' with transaction id' + str(txid['txid']))
 
 
 endTime = (time.time() - startTime)
