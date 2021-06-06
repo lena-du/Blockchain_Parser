@@ -19,7 +19,7 @@ def getBestBlockHash():
 
 def getBlockHash(height):
     stream = os.popen(f"bitcoin-cli getblockhash {height}")
-    output = stream.read()
+    output = stream.read().strip()
     return output
 
 
@@ -66,7 +66,7 @@ def gettx(tx, block):
     ts_epoch = block['time']
     block_timestamp = datetime.fromtimestamp(ts_epoch)
     block_date = block_timestamp.strftime('%Y-%m-%d')
-    txdata['block_date'] = str(block_date) # need to check with neo4j
+    txdata['block_date'] = str(block_date)
 
     addr = ""
     val = 0
