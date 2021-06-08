@@ -64,7 +64,7 @@ def gettx(tx, block):
     txdata['txid'] = tx['txid']
     txdata['block_hash'] = block['hash']
     ts_epoch = block['time']
-    block_timestamp = datetime.fromtimestamp(ts_epoch)
+    block_timestamp = datetime.fromtimestamp(ts_epoch, tz=timezone.utc)
     block_date = block_timestamp.strftime('%Y-%m-%d')
     txdata['block_date'] = str(block_date)
 
