@@ -51,15 +51,15 @@ def getblock(blockhash):
 
     return data, block
 
-def gettx(txid,block): 
-    command = "bitcoin-cli getrawtransaction " + txid + " true"
+def gettx(tx,block): 
+    command = "bitcoin-cli getrawtransaction " + tx['txid'] + " true"
     stream = os.popen(command)
 
     # load data into json object rawtx
     rawtx = json.loads(stream.read())
 
     txdata = {}
-    txdata['txid'] = txid
+    txdata['txid'] = tx['txid']
     txdata['block_hash'] = block['hash']
     ts_epoch = block['time']
     block_timestamp = datetime.fromtimestamp(ts_epoch)
@@ -146,7 +146,7 @@ def gettx(txid,block):
         jOutAddr = json.dumps(outputAddrObject)
         jsonOutDict = json.loads(jOutAddr)
         output_address_list.append(jsonOutDict)
-        inSum = int(outSum)
+        inSum = round(outSum)
         inputAddrObject['addr'] = "coinbase"
         inputAddrObject['val'] = inSum
 
