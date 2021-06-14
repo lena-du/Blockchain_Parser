@@ -19,7 +19,7 @@ def getBestBlockHash():
 
 def getBlockHash(height):
     stream = os.popen(f"bitcoin-cli getblockhash {height}")
-    output = stream.read().strip()
+    output = stream.read()
     return output
 
 
@@ -51,9 +51,7 @@ def getblock(blockhash):
 
     return data, block
 
-
-def gettx(tx, block):
-
+def gettx(tx,block): 
     command = "bitcoin-cli getrawtransaction " + tx['txid'] + " true"
     stream = os.popen(command)
 
@@ -64,9 +62,9 @@ def gettx(tx, block):
     txdata['txid'] = tx['txid']
     txdata['block_hash'] = block['hash']
     ts_epoch = block['time']
-    block_timestamp = datetime.fromtimestamp(ts_epoch, tz=timezone.utc)
+    block_timestamp = datetime.fromtimestamp(ts_epoch)
     block_date = block_timestamp.strftime('%Y-%m-%d')
-    txdata['block_date'] = str(block_date)
+    txdata['block_date'] = str(block_date) # need to check with neo4j
 
     addr = ""
     val = 0
@@ -84,7 +82,7 @@ def gettx(tx, block):
             inputstream = os.popen(command)
             inputtx = json.loads(inputstream.read())
             inputtx_json_data = json.dumps(inputtx, indent=4, sort_keys=False)
-            val = int (inputtx['vout'][i['vout']]['value']*100000000)
+            val = round(inputtx['vout'][i['vout']]['value']*100000000)
             inSum += val
 
             # input addresses - P2PK
@@ -110,11 +108,11 @@ def gettx(tx, block):
         # output addresses
         for o in rawtx['vout']:
             if o['scriptPubKey']['type'] != "nulldata": # handling OP_RETURN data - can be skipped
-                outSum += o['value']
+                outSum += o['value']*100000000
                 if o['scriptPubKey']['type'] == "pubkey":
                     a = getAddress(o['scriptPubKey']['asm'].split()[0] )
                     outputAddrObject['addr'] = a.decode("utf-8")
-                    outputAddrObject['val'] =int (o['value']*100000000)
+                    outputAddrObject['val'] =round(o['value']*100000000)
                     outputAddrObject['outNr'] = o['n']
                     
                     jOutAddr = json.dumps(outputAddrObject)
@@ -123,31 +121,32 @@ def gettx(tx, block):
                 if 'addresses' in o['scriptPubKey']:
                     for a in o['scriptPubKey']['addresses']:
                         outputAddrObject['addr'] = a
-                        outputAddrObject['val'] =int (o['value']*100000000)
+                        outputAddrObject['val'] =round(o['value']*100000000)
                         outputAddrObject['outNr'] = o['n']
 
                         jOutAddr = json.dumps(outputAddrObject)
                         jsonOutDict = json.loads(jOutAddr)
                         output_address_list.append(jsonOutDict)
+                        break
     else:
         for o in rawtx['vout']:
             if o['scriptPubKey']['type'] != "nulldata": # handling OP_RETURN data - can be skipped
-                outSum += o['value']
+                outSum += o['value']*100000000
                 if o['scriptPubKey']['type'] == "pubkey":
                     a = getAddress(o['scriptPubKey']['asm'].split()[0] )
                     outputAddrObject['addr'] = a.decode("utf-8")
-                    outputAddrObject['val'] =int (o['value']*100000000)
+                    outputAddrObject['val'] =round(o['value']*100000000)
                     outputAddrObject['outNr'] = o['n']
                 if 'addresses' in o['scriptPubKey']:
                     for a in o['scriptPubKey']['addresses']:
                         outputAddrObject['addr'] = a
-                        outputAddrObject['val'] =int (o['value']*100000000)
+                        outputAddrObject['val'] =round(o['value']*100000000)
                         outputAddrObject['outNr'] = o['n']
 
         jOutAddr = json.dumps(outputAddrObject)
         jsonOutDict = json.loads(jOutAddr)
         output_address_list.append(jsonOutDict)
-        inSum = int(outSum*100000000)
+        inSum = round(outSum)
         inputAddrObject['addr'] = "coinbase"
         inputAddrObject['val'] = inSum
 
@@ -158,12 +157,13 @@ def gettx(tx, block):
     # get degrees
     txdata['outDegree'] = len(rawtx['vout'])
     txdata['inDegree'] = len(rawtx['vin'])
-    txdata['outSum'] = int(outSum*100000000)
+    txdata['outSum'] = round(outSum)
     txdata['inSum'] = inSum
     txdata['input_list'] = input_address_list
     txdata['output_list'] = output_address_list
 
     return txdata
+
 
 def getAddress(pubKey):
     h3 = hashlib.sha256(unhexlify(pubKey))
