@@ -51,7 +51,7 @@ def getblock(blockhash):
 
     return data, block
 
-def gettx(tx,block): 
+def gettx(tx,block,getinput): 
     command = "bitcoin-cli getrawtransaction " + tx['txid'] + " true"
     stream = os.popen(command)
 
@@ -77,33 +77,34 @@ def gettx(tx,block):
 
     ## check coinbase
     if 'coinbase' not in rawtx['vin'][0]:
-        for i in rawtx['vin']:
-            command = "bitcoin-cli getrawtransaction " + i['txid'] + " true"
-            inputstream = os.popen(command)
-            inputtx = json.loads(inputstream.read())
-            inputtx_json_data = json.dumps(inputtx, indent=4, sort_keys=False)
-            val = round(inputtx['vout'][i['vout']]['value']*100000000)
-            inSum += val
+        if getinput: 
+            for i in rawtx['vin']:
+                command = "bitcoin-cli getrawtransaction " + i['txid'] + " true"
+                inputstream = os.popen(command)
+                inputtx = json.loads(inputstream.read())
+                inputtx_json_data = json.dumps(inputtx, indent=4, sort_keys=False)
+                val = round(inputtx['vout'][i['vout']]['value']*100000000)
+                inSum += val
 
-            # input addresses - P2PK
-            if inputtx['vout'][i['vout']]['scriptPubKey']['type'] == "pubkey":
-                ia = getAddress(inputtx['vout'][i['vout']]['scriptPubKey']['asm'].split()[0])
-                inputAddrObject['addr'] = ia.decode("utf-8")
-                inputAddrObject['val'] = val  
-
-                jInAddr = json.dumps(inputAddrObject)
-                jsonInDict = json.loads(jInAddr)
-                input_address_list.append(jsonInDict)
-
-            # P2PKH
-            if 'addresses' in inputtx['vout'][i['vout']]['scriptPubKey']:
-                for ia in inputtx['vout'][i['vout']]['scriptPubKey']['addresses']:
-                    inputAddrObject['addr'] = ia
-                    inputAddrObject['val'] = val
+                # input addresses - P2PK
+                if inputtx['vout'][i['vout']]['scriptPubKey']['type'] == "pubkey":
+                    ia = getAddress(inputtx['vout'][i['vout']]['scriptPubKey']['asm'].split()[0])
+                    inputAddrObject['addr'] = ia.decode("utf-8")
+                    inputAddrObject['val'] = val  
 
                     jInAddr = json.dumps(inputAddrObject)
                     jsonInDict = json.loads(jInAddr)
                     input_address_list.append(jsonInDict)
+
+                # P2PKH
+                if 'addresses' in inputtx['vout'][i['vout']]['scriptPubKey']:
+                    for ia in inputtx['vout'][i['vout']]['scriptPubKey']['addresses']:
+                        inputAddrObject['addr'] = ia
+                        inputAddrObject['val'] = val
+
+                        jInAddr = json.dumps(inputAddrObject)
+                        jsonInDict = json.loads(jInAddr)
+                        input_address_list.append(jsonInDict)
 
         # output addresses
         for o in rawtx['vout']:
@@ -160,7 +161,8 @@ def gettx(tx,block):
     txdata['inDegree'] = len(rawtx['vin'])
     txdata['outSum'] = round(outSum)
     txdata['inSum'] = inSum
-    txdata['input_list'] = input_address_list
+    if len(input_address_list) != 0: 
+        txdata['input_list'] = input_address_list
     txdata['output_list'] = output_address_list
 
     return txdata
@@ -179,7 +181,7 @@ def getAddress(pubKey):
 
     return b58encode(result)
 
-def gettesttx(txid,block): 
+def gettesttx2(txid,block,getinput): 
     command = "bitcoin-cli getrawtransaction " + txid + " true"
     stream = os.popen(command)
 
@@ -205,33 +207,34 @@ def gettesttx(txid,block):
 
     ## check coinbase
     if 'coinbase' not in rawtx['vin'][0]:
-        for i in rawtx['vin']:
-            command = "bitcoin-cli getrawtransaction " + i['txid'] + " true"
-            inputstream = os.popen(command)
-            inputtx = json.loads(inputstream.read())
-            inputtx_json_data = json.dumps(inputtx, indent=4, sort_keys=False)
-            val = round(inputtx['vout'][i['vout']]['value']*100000000)
-            inSum += val
+        if getinput: 
+            for i in rawtx['vin']:
+                command = "bitcoin-cli getrawtransaction " + i['txid'] + " true"
+                inputstream = os.popen(command)
+                inputtx = json.loads(inputstream.read())
+                inputtx_json_data = json.dumps(inputtx, indent=4, sort_keys=False)
+                val = round(inputtx['vout'][i['vout']]['value']*100000000)
+                inSum += val
 
-            # input addresses - P2PK
-            if inputtx['vout'][i['vout']]['scriptPubKey']['type'] == "pubkey":
-                ia = getAddress(inputtx['vout'][i['vout']]['scriptPubKey']['asm'].split()[0])
-                inputAddrObject['addr'] = ia.decode("utf-8")
-                inputAddrObject['val'] = val  
-
-                jInAddr = json.dumps(inputAddrObject)
-                jsonInDict = json.loads(jInAddr)
-                input_address_list.append(jsonInDict)
-
-            # P2PKH
-            if 'addresses' in inputtx['vout'][i['vout']]['scriptPubKey']:
-                for ia in inputtx['vout'][i['vout']]['scriptPubKey']['addresses']:
-                    inputAddrObject['addr'] = ia
-                    inputAddrObject['val'] = val
+                # input addresses - P2PK
+                if inputtx['vout'][i['vout']]['scriptPubKey']['type'] == "pubkey":
+                    ia = getAddress(inputtx['vout'][i['vout']]['scriptPubKey']['asm'].split()[0])
+                    inputAddrObject['addr'] = ia.decode("utf-8")
+                    inputAddrObject['val'] = val  
 
                     jInAddr = json.dumps(inputAddrObject)
                     jsonInDict = json.loads(jInAddr)
                     input_address_list.append(jsonInDict)
+
+                # P2PKH
+                if 'addresses' in inputtx['vout'][i['vout']]['scriptPubKey']:
+                    for ia in inputtx['vout'][i['vout']]['scriptPubKey']['addresses']:
+                        inputAddrObject['addr'] = ia
+                        inputAddrObject['val'] = val
+
+                        jInAddr = json.dumps(inputAddrObject)
+                        jsonInDict = json.loads(jInAddr)
+                        input_address_list.append(jsonInDict)
 
         # output addresses
         for o in rawtx['vout']:
@@ -288,7 +291,8 @@ def gettesttx(txid,block):
     txdata['inDegree'] = len(rawtx['vin'])
     txdata['outSum'] = round(outSum)
     txdata['inSum'] = inSum
-    txdata['input_list'] = input_address_list
+    if getinput:
+        txdata['input_list'] = input_address_list
     txdata['output_list'] = output_address_list
 
     return txdata
