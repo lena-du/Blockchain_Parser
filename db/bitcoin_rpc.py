@@ -77,8 +77,8 @@ def gettx(tx,block,getinput):
 
     ## check coinbase
     if 'coinbase' not in rawtx['vin'][0]:
-        if getinput: 
-            for i in rawtx['vin']:
+        for i in rawtx['vin']:
+            if getinput:
                 command = "bitcoin-cli getrawtransaction " + i['txid'] + " true"
                 inputstream = os.popen(command)
                 inputtx = json.loads(inputstream.read())
@@ -105,6 +105,13 @@ def gettx(tx,block,getinput):
                         jInAddr = json.dumps(inputAddrObject)
                         jsonInDict = json.loads(jInAddr)
                         input_address_list.append(jsonInDict)
+            else: 
+                inputAddrObject['txid'] = i['txid']
+                inputAddrObject['vout'] = i["vout"] 
+
+                jInAddr = json.dumps(inputAddrObject)
+                jsonInDict = json.loads(jInAddr)
+                input_address_list.append(jsonInDict)           
 
         # output addresses
         for o in rawtx['vout']:
@@ -207,8 +214,8 @@ def gettesttx2(txid,block,getinput):
 
     ## check coinbase
     if 'coinbase' not in rawtx['vin'][0]:
-        if getinput: 
-            for i in rawtx['vin']:
+        for i in rawtx['vin']:
+            if getinput:
                 command = "bitcoin-cli getrawtransaction " + i['txid'] + " true"
                 inputstream = os.popen(command)
                 inputtx = json.loads(inputstream.read())
@@ -235,6 +242,13 @@ def gettesttx2(txid,block,getinput):
                         jInAddr = json.dumps(inputAddrObject)
                         jsonInDict = json.loads(jInAddr)
                         input_address_list.append(jsonInDict)
+            else: 
+                inputAddrObject['txid'] = i['txid']
+                inputAddrObject['vout'] = i["vout"] 
+
+                jInAddr = json.dumps(inputAddrObject)
+                jsonInDict = json.loads(jInAddr)
+                input_address_list.append(jsonInDict)  
 
         # output addresses
         for o in rawtx['vout']:
@@ -291,7 +305,7 @@ def gettesttx2(txid,block,getinput):
     txdata['inDegree'] = len(rawtx['vin'])
     txdata['outSum'] = round(outSum)
     txdata['inSum'] = inSum
-    if getinput:
+    if len(input_address_list) != 0:
         txdata['input_list'] = input_address_list
     txdata['output_list'] = output_address_list
 
