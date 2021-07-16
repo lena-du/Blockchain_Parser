@@ -27,7 +27,7 @@ def deleteTestEvaluationNodes(node_labels,
     driver, session = startNeo4jSession(location=neo4j_location, port=neo4j_port)
 
     # loop through all thre node types / labels
-    for label in node_labels['test'].keys():
+    for label in node_labels['test'].values():
         
         # delet nodes        
         session.run(f'MATCH (n:{label}) DETACH DELETE n')
