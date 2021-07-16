@@ -1,0 +1,2 @@
+experimentRun,evaluate_original,start_block_height,end_block_height,kafka_partitions,batching,match_on_previous_add,heap_size,bypass_kafka,check_correctness,endTimePart1,endTimePart2,totalExecutionTime,timeOutReached
+1,False,1,6,1,1,False,5,False,False,0.372572660446167,0.15007686614990234,0.39252710342407227,False

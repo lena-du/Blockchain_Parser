@@ -61,7 +61,7 @@ def getNodes(start_block_height, end_block_height):
 
             try:
                 # retrieve transaction information
-                tx = gettx(tx,block)
+                tx = gettx(tx,block,False)
                 # add transaction nodes
                 deletion_transactions.append(tx['txid'])
 
