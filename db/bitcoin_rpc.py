@@ -107,7 +107,7 @@ def gettx(tx,block,getinput):
                         input_address_list.append(jsonInDict)
             else: 
                 inputAddrObject['txid'] = i['txid']
-                inputAddrObject['vout'] = i["vout"] 
+                inputAddrObject['outNr'] = i['vout']  
 
                 jInAddr = json.dumps(inputAddrObject)
                 jsonInDict = json.loads(jInAddr)
