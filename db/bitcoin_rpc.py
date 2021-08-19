@@ -22,8 +22,7 @@ def getBlockHash(height):
     output = stream.read().strip()
     return output
 
-
-def getblock(blockhash):
+def getBlock(blockhash):
     command = "bitcoin-cli getblock " + blockhash + " 2"
     stream = os.popen(command)
     block = json.loads(stream.read())
@@ -49,9 +48,10 @@ def getblock(blockhash):
     if block_height != 0:
         data['previousblockhash'] = previousblockhash
 
-    return data, block
+    return block_height, data, block
 
-def gettx(tx,block,getinput): 
+
+def getTx(tx,block,getinput): 
     command = "bitcoin-cli getrawtransaction " + tx['txid'] + " true"
     stream = os.popen(command)
 
@@ -64,7 +64,7 @@ def gettx(tx,block,getinput):
     ts_epoch = block['time']
     block_timestamp = datetime.fromtimestamp(ts_epoch, tz=timezone.utc)
     block_date = block_timestamp.strftime('%Y-%m-%d')
-    txdata['block_date'] = str(block_date) # need to check with neo4j
+    txdata['block_date'] = str(block_date)
 
     addr = ""
     val = 0
@@ -138,7 +138,7 @@ def gettx(tx,block,getinput):
                         break
     else:
         for o in rawtx['vout']:
-            if o['scriptPubKey']['type'] != "nulldata": # handling OP_RETURN data - can be skipped
+            if o['scriptPubKey']['type'] != "nulldata": # handling OP_RETURN data - skip
                 outSum += o['value']*100000000
                 if o['scriptPubKey']['type'] == "pubkey":
                     a = getAddress(o['scriptPubKey']['asm'].split()[0] )
@@ -172,9 +172,9 @@ def gettx(tx,block,getinput):
         txdata['input_list'] = input_address_list
     txdata['output_list'] = output_address_list
 
-    return txdata
+    return block['height'], txdata
 
-
+# decode into address
 def getAddress(pubKey):
     h3 = hashlib.sha256(unhexlify(pubKey))
     h4 = hashlib.new('ripemd160', h3.digest())
@@ -187,129 +187,3 @@ def getAddress(pubKey):
     result += h6.digest()[:4]
 
     return b58encode(result)
-
-def gettesttx2(txid,block,getinput): 
-    command = "bitcoin-cli getrawtransaction " + txid + " true"
-    stream = os.popen(command)
-
-    # load data into json object rawtx
-    rawtx = json.loads(stream.read())
-
-    txdata = {}
-    txdata['txid'] = txid
-    txdata['block_hash'] = block['hash']
-    ts_epoch = block['time']
-    block_timestamp = datetime.fromtimestamp(ts_epoch, tz=timezone.utc)
-    block_date = block_timestamp.strftime('%Y-%m-%d')
-    txdata['block_date'] = str(block_date) # need to check with neo4j
-
-    addr = ""
-    val = 0
-    outSum = 0
-    inSum = 0
-    inputAddrObject = {}
-    outputAddrObject = {}
-    input_address_list = []
-    output_address_list = []
-
-    ## check coinbase
-    if 'coinbase' not in rawtx['vin'][0]:
-        for i in rawtx['vin']:
-            if getinput:
-                command = "bitcoin-cli getrawtransaction " + i['txid'] + " true"
-                inputstream = os.popen(command)
-                inputtx = json.loads(inputstream.read())
-                inputtx_json_data = json.dumps(inputtx, indent=4, sort_keys=False)
-                val = round(inputtx['vout'][i['vout']]['value']*100000000)
-                inSum += val
-
-                # input addresses - P2PK
-                if inputtx['vout'][i['vout']]['scriptPubKey']['type'] == "pubkey":
-                    ia = getAddress(inputtx['vout'][i['vout']]['scriptPubKey']['asm'].split()[0])
-                    inputAddrObject['addr'] = ia.decode("utf-8")
-                    inputAddrObject['val'] = val  
-
-                    jInAddr = json.dumps(inputAddrObject)
-                    jsonInDict = json.loads(jInAddr)
-                    input_address_list.append(jsonInDict)
-
-                # P2PKH
-                if 'addresses' in inputtx['vout'][i['vout']]['scriptPubKey']:
-                    for ia in inputtx['vout'][i['vout']]['scriptPubKey']['addresses']:
-                        inputAddrObject['addr'] = ia
-                        inputAddrObject['val'] = val
-
-                        jInAddr = json.dumps(inputAddrObject)
-                        jsonInDict = json.loads(jInAddr)
-                        input_address_list.append(jsonInDict)
-            else: 
-                inputAddrObject['txid'] = i['txid']
-                inputAddrObject['vout'] = i["vout"] 
-
-                jInAddr = json.dumps(inputAddrObject)
-                jsonInDict = json.loads(jInAddr)
-                input_address_list.append(jsonInDict)  
-
-        # output addresses
-        for o in rawtx['vout']:
-            if o['scriptPubKey']['type'] != "nulldata": # handling OP_RETURN data - can be skipped
-                outSum += o['value']*100000000
-                if o['scriptPubKey']['type'] == "pubkey":
-                    a = getAddress(o['scriptPubKey']['asm'].split()[0] )
-                    outputAddrObject['addr'] = a.decode("utf-8")
-                    outputAddrObject['val'] =round(o['value']*100000000)
-                    outputAddrObject['outNr'] = o['n']
-                    
-                    jOutAddr = json.dumps(outputAddrObject)
-                    jsonOutDict = json.loads(jOutAddr)
-                    output_address_list.append(jsonOutDict)
-                if 'addresses' in o['scriptPubKey']:
-                    for a in o['scriptPubKey']['addresses']:
-                        outputAddrObject['addr'] = a
-                        outputAddrObject['val'] =round(o['value']*100000000)
-                        outputAddrObject['outNr'] = o['n']
-
-                        jOutAddr = json.dumps(outputAddrObject)
-                        jsonOutDict = json.loads(jOutAddr)
-                        output_address_list.append(jsonOutDict)
-                        break
-    else:
-        for o in rawtx['vout']:
-            if o['scriptPubKey']['type'] != "nulldata": # handling OP_RETURN data - can be skipped
-                outSum += o['value']*100000000
-                if o['scriptPubKey']['type'] == "pubkey":
-                    a = getAddress(o['scriptPubKey']['asm'].split()[0] )
-                    outputAddrObject['addr'] = a.decode("utf-8")
-                    outputAddrObject['val'] =round(o['value']*100000000)
-                    outputAddrObject['outNr'] = o['n']
-                if 'addresses' in o['scriptPubKey']:
-                    for a in o['scriptPubKey']['addresses']:
-                        outputAddrObject['addr'] = a
-                        outputAddrObject['val'] =round(o['value']*100000000)
-                        outputAddrObject['outNr'] = o['n']
-                        break
-
-        jOutAddr = json.dumps(outputAddrObject)
-        jsonOutDict = json.loads(jOutAddr)
-        output_address_list.append(jsonOutDict)
-        inSum = round(outSum)
-        inputAddrObject['addr'] = "coinbase"
-        inputAddrObject['val'] = inSum
-
-        jInAddr = json.dumps(inputAddrObject)
-        jsonInDict = json.loads(jInAddr)
-        input_address_list.append(jsonInDict)
-
-    # get degrees
-    txdata['outDegree'] = len(rawtx['vout'])
-    txdata['inDegree'] = len(rawtx['vin'])
-    txdata['outSum'] = round(outSum)
-    txdata['inSum'] = inSum
-    if len(input_address_list) != 0:
-        txdata['input_list'] = input_address_list
-    txdata['output_list'] = output_address_list
-
-    return txdata
-
-
-
