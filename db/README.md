@@ -1,5 +1,7 @@
 # Prerequisites
-In order for Bitcoin-Sync to work, Kafka and Neo4j need to be installed on the server
+In order for Bitcoin-Sync to work, the server must be running Bitcoin Core full node and Kafka & Neo4j needs to be additionally installed.
+
+
 
 # Instructions
 1. Download the git repository on your server. 
