@@ -80,6 +80,8 @@ def getCypherQueries(topic, evaluate_original, matchOnAddress, getTemplate, node
     # - including creation time 
     # - including matching on previous transaction
     # ! only works on consecutive chain !
+    
+    
     transactionQueryMatchTx = f'''
     MERGE (t:{transactionLabel}{{txid: $txid}}) 
         SET t += {{creationTime:apoc.date.currentTimestamp(), inDegree: $inDegree, outDegree: $outDegree, outSum: $outSum, inSum: $inSum, date: date($block_date)}}
@@ -105,8 +107,40 @@ def getCypherQueries(topic, evaluate_original, matchOnAddress, getTemplate, node
                   (i_a:{addressLabel})
                 ON MATCH SET  i_a += {{outDegree: i_a.outDegree + 1}}
             MERGE (i_a)-[:Sends{{value: i_r.value}}]->(t)) )
+            
     '''
+    
+    # overriding actual query to test on incomplete chain 
+    # last foreach statement changed
+    transactionQueryMatchTx = f'''
+    MERGE (t:{transactionLabel}{{txid: $txid}}) 
+        SET t += {{creationTime:apoc.date.currentTimestamp(), inDegree: $inDegree, outDegree: $outDegree, outSum: $outSum, inSum: $inSum, date: date($block_date)}}
 
+    MERGE (b:{blockLabel}{{hash: $block_hash}})
+    MERGE (t)-[:BELONGS_TO]->(b)
+    
+    FOREACH (output in $output_list | 
+        MERGE (o_a:{addressLabel}{{address: output.addr}}) 
+            ON CREATE SET o_a += {{creationTime:apoc.date.currentTimestamp(), inDegree: 1, outDegree: 0}}
+            ON MATCH  SET o_a += {{inDegree: o_a.inDegree + 1}}
+        MERGE (t)-[r:RECEIVES{{output_nr: output.outNr, value: output.val}}]->(o_a))
+        
+    FOREACH (input in $input_list | 
+        FOREACH (_ IN CASE WHEN EXISTS(input.addr) THEN [1] ELSE [] END |    
+            MERGE (i_a:{addressLabel}{{address: input.addr}})
+                ON CREATE SET i_a += {{creationTime:apoc.date.currentTimestamp(), inDegree: 0, outDegree: 1}}
+                ON MATCH SET  i_a += {{outDegree: i_a.outDegree + 1}}
+            MERGE (i_a)-[:SENDS{{value: input.val}}]->(t)) 
+        FOREACH (_ IN CASE WHEN EXISTS(input.txid) THEN [1] ELSE [] END |
+            MERGE (i_tx:{transactionLabel}{{txid: input.txid}})
+                  -[i_r:RECEIVES{{output_nr: input.outNr}}]->
+                  (i_a:{addressLabel})
+                ON MATCH SET  i_a += {{outDegree: i_a.outDegree + 1}} 
+            MERGE (i_a)-[s_i_a:Sends]->(t)
+                ON MATCH SET s_i_a = {{value: i_r.value + 1}} ) )
+            
+    '''
+    #//-[:Sends{{value: i_r.value}}]->(t)
     
     # ** Block **
     

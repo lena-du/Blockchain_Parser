@@ -30,7 +30,7 @@ def changeStreamsFile(path, kafka_topics, evaluate_original, matchOnAddress, get
                                                                 getTemplate, 
                                                                 node_labels, 
                                                                 evaluation) + '\n'                
-                print(lines[i])
+                #print(lines[i])
 
                 
     # write file back 

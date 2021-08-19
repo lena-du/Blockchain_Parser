@@ -2,9 +2,13 @@
 # coding: utf-8
 
 import os
+import time
+
 
 def partitionChanger(partitions):
-    commands = ["sudo systemctl stop neo4j", "cd /kafka/bin", 
+    
+    # stop neo4j as we delete topics to which consumers are subscribed
+    commands = ["sudo systemctl stop neo4j",
                 "kafka-topics --zookeeper localhost:2181 --delete --topic blocks",
                 "kafka-topics --zookeeper localhost:2181 --delete --topic transactions",
                 f"kafka-topics --create  --zookeeper localhost:2181 --topic blocks --replication-factor 1 --partitions {partitions}",
@@ -12,3 +16,8 @@ def partitionChanger(partitions):
                 "sudo systemctl start neo4j"]
     for i in commands:
         stream = os.popen(i)
+        time.sleep(10)
+    
+    # allow time until neo4j is active again 
+    time.sleep(30)
+        

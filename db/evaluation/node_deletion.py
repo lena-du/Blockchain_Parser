@@ -7,7 +7,7 @@
 
 
 import numpy as np
-import sys
+import time
 import sys
 sys.path.append("../")
 from bitcoin_rpc import *
@@ -31,6 +31,17 @@ def deleteTestEvaluationNodes(node_labels,
         
         # delet nodes        
         session.run(f'MATCH (n:{label}) DETACH DELETE n')
+       
+    
+    # test whether all nodes are deleted 
+    for label in node_labels['test'].values():
+        queryresult = session.run(f'MATCH (n:{label}) RETURN n').values()
+        for i in range(len(queryresult)*3): 
+            queryresult = session.run(f'MATCH (n:{label}) RETURN n').values()
+            if queryresult != []:
+                time.sleep(30)
+            elif queryresult == []:
+                break
     
     session.close()
     driver.close()
@@ -51,7 +62,7 @@ def getNodes(start_block_height, end_block_height):
 
         # retrival of block + transfer to respective topic 
         blockhash = getBlockHash(blockheight)
-        data, block = getblock(blockhash)
+        key, data, block = getBlock(blockhash)
 
         # add blocks
         deletion_blocks.append(block['hash'])
@@ -61,7 +72,7 @@ def getNodes(start_block_height, end_block_height):
 
             try:
                 # retrieve transaction information
-                tx = gettx(tx,block,False)
+                blockheight, tx = getTx(tx,block,False)
                 # add transaction nodes
                 deletion_transactions.append(tx['txid'])
 
@@ -146,6 +157,21 @@ def deleteOriginalEvaluationNodes(deletion_nodes,
         # delet nodes
         for identifier in node_list:
             session.run(f'MATCH (n:{label} {{{identifying_property}: \'{identifier}\'}}) DETACH DELETE n')
+    
+    
+    # check whether all addresses are removed before returning
+    label     = node_labels['original'][node_type]
+    identifying_property = 'address'
+    node_list = deletion_nodes[node_type]
+    # find last address to delete
+    identifier = node_list[-1]
+    
+    for i in range(len(node_list)*3): 
+        queryresult = session.run(f'MATCH (n:{label} {{{identifying_property}: \'{identifier}\'}}) RETURN n').values()
+        if queryresult != []:
+            time.sleep(30)
+        elif queryresult == []:
+            break
     
     session.close()
     driver.close()
