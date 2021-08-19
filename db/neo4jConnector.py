@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # Function to start neo4j session
+# # Function to start & stop neo4j session
 
 from neo4j import GraphDatabase
 import pandas as pd
@@ -9,14 +9,15 @@ import os
 
 
 def startNeo4jSession(credentials  = './credentialsNeo4j.json',
-                      location = 'server',   # create settings file, retrieve from these
-                      port = 7687):          # same here
+                      location = 'server',  
+                      port = 7687,
+                      settings_path = './'):
     
     try:
         credentialsNeo4j = pd.read_json(credentials)
     except:
         try:
-            credentialsNeo4j = pd.read_json(os.path.join(os.pardir, credentials))
+            credentialsNeo4j = pd.read_json(os.path.join(settings_path, credentials[2:]))
         except:
             raise Exception('credentials could not be found')
 
@@ -31,3 +32,8 @@ def startNeo4jSession(credentials  = './credentialsNeo4j.json',
     driver = GraphDatabase.driver(uri, auth=(username, password))
     session = driver.session()
     return driver, session
+
+def endNeo4jConnection(session, driver):
+    session.close()
+    driver.close()
+    return

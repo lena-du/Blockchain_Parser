@@ -1,0 +1,13 @@
+{
+    "path_to_settings": "/home/btc/db",
+    "path_to_neo4j_conf_dir": "/etc/neo4j",
+    "kafka_topics" :  {
+        "block": "blocks",
+        "transaction": "transactions"
+        },
+    "node_labels_neo4j": {
+        "block": "Block",
+        "transaction": "Transaction",
+        "address": "Address"
+    }   
+}
